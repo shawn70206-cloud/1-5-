@@ -378,12 +378,12 @@
                     <ul class="tree-ul mt-2 text-left" id="huang-branch">
                         <li class="tree-li"><div class="node-box leaf-node tag-pairing">配搭：振芳B、巧迷S</div></li>
                         <li class="tree-li"><div class="node-box leaf-node tag-pursuit">追求：晨興、生命讀經</div></li>
-                        <li class="tree-li"><div class="node-box leaf-node tag-pairing">配搭：帶聚會、餅杯、奉獻箱</div></li>
+                        <li class="tree-li"><div class="node-box leaf-node tag-server">服事：帶聚會、餅杯、奉獻箱</div></li>
                         <li class="tree-li">
                             <div class="node-box toggle-arrow" onclick="toggleSub(this)"><span class="toggle-arrow"></span>陳世傑B</div>
                             <ul class="tree-ul">
                                 <li class="tree-li"><div class="node-box leaf-node tag-pairing">配搭：吉安</div></li>
-                                <li class="tree-li"><div class="node-box leaf-node tag-pairing">配搭：餅杯、奉獻箱</div></li>
+                                <li class="tree-li"><div class="node-box leaf-node tag-server">服事：餅杯、奉獻箱</div></li>
                                 <li class="tree-li"><div class="node-box leaf-node tag-pursuit">追求：偶而禱告</div></li>
                                 <li class="tree-li"><div class="node-box leaf-node tag-gospel">高源凱 <span class="badge tag-gospel">偶而聯繫</span></div></li>
                             </ul>
@@ -403,13 +403,13 @@
                     <ul class="tree-ul mt-2 text-left" id="xu-branch">
                         <li class="tree-li"><div class="node-box leaf-node tag-pairing">配搭：振芳B、巧迷S</div></li>
                         <li class="tree-li"><div class="node-box leaf-node tag-pursuit">追求：晨興、禱告</div></li>
-                        <li class="tree-li"><div class="node-box leaf-node tag-pairing">配搭：小杯</div></li>
+                        <li class="tree-li"><div class="node-box leaf-node tag-server">服事：小杯</div></li>
                         <li class="tree-li">
                             <div class="node-box toggle-arrow" onclick="toggleSub(this)"><span class="toggle-arrow"></span>鄧娟娟S</div>
                             <ul class="tree-ul">
                                 <li class="tree-li"><div class="node-box leaf-node tag-pairing">配搭：繼華S、玉慧S、正惠S</div></li>
                                 <li class="tree-li"><div class="node-box leaf-node tag-pursuit">追求：晨興、禱告</div></li>
-                                <li class="tree-li"><div class="node-box leaf-node tag-pairing">配搭：小杯</div></li>
+                                <li class="tree-li"><div class="node-box leaf-node tag-server">服事：小杯</div></li>
                                 <li class="tree-li">
                                     <div class="node-box toggle-arrow" onclick="toggleSub(this)"><span class="toggle-arrow"></span>陳羽芳S</div>
                                     <ul class="tree-ul">
@@ -453,7 +453,7 @@
                     <ul class="tree-ul mt-2 text-left" id="chang-branch">
                         <li class="tree-li"><div class="node-box leaf-node tag-pairing">配搭：恩德B</div></li>
                         <li class="tree-li"><div class="node-box leaf-node tag-pursuit">追求：晨興</div></li>
-                        <li class="tree-li"><div class="node-box leaf-node tag-pairing">配搭：帶聚會</div></li>
+                        <li class="tree-li"><div class="node-box leaf-node tag-server">服事：帶聚會</div></li>
                         <li class="tree-li">
                             <div class="node-box toggle-arrow" onclick="toggleSub(this)"><span class="toggle-arrow"></span>葉修誠B</div>
                             <ul class="tree-ul">
@@ -485,7 +485,7 @@
                             <ul class="tree-ul">
                                 <li class="tree-li"><div class="node-box leaf-node tag-pairing">配搭：正惠S</div></li>
                                 <li class="tree-li"><div class="node-box leaf-node tag-pursuit">追求：晨興</div></li>
-                                <li class="tree-li"><div class="node-box leaf-node tag-pairing">配搭：司琴</div></li>
+                                <li class="tree-li"><div class="node-box leaf-node tag-server">服事：司琴</div></li>
                                 <li class="tree-li"><div class="node-box leaf-node tag-gospel">柯芷誼S、翁莉媛S <span class="badge tag-gospel">久未探望</span></div></li>
                             </ul>
                         </li>
@@ -495,7 +495,7 @@
                             <ul class="tree-ul">
                                 <li class="tree-li"><div class="node-box leaf-node tag-pairing">配搭：正惠S</div></li>
                                 <li class="tree-li"><div class="node-box leaf-node tag-pursuit">追求：晨興</div></li>
-                                <li class="tree-li"><div class="node-box leaf-node tag-pairing">配搭：司琴</div></li>
+                                <li class="tree-li"><div class="node-box leaf-node tag-server">服事：司琴</div></li>
                                 <li class="tree-li"><div class="node-box leaf-node tag-pairing">余倢 <span class="badge tag-pairing">配搭：正惠、玉慧</span></div></li>
                                 <li class="tree-li"><div class="node-box leaf-node tag-pairing">粘凱柔S <span class="badge tag-pairing">配搭：繼華</span></div></li>
                                 <li class="tree-li"><div class="node-box leaf-node tag-pursuit">粘凱柔S <span class="badge tag-pursuit">牧養材料</span></div></li>
@@ -525,15 +525,18 @@
     function normalizeEntryType(typeName) {
         const normalized = (typeName || '').trim();
         const typeMap = {
-            '服事': '配搭',
-            '服事者': '配搭',
-            '牧養': '配搭',
-            '牧養者': '配搭',
+            '服事': '服事',
+            '服事者': '服事',
+            '牧養': '服事',
+            '牧養者': '服事',
             '追求': '追求',
             '配搭': '配搭',
             '操練': '配搭',
-            '司琴': '配搭',
-            '帶聚會': '配搭',
+            '司琴': '服事',
+            '帶聚會': '服事',
+            '餅杯': '服事',
+            '奉獻箱': '服事',
+            '小杯': '服事',
             '福音': '福音',
             '備註': '福音',
             '對象': '福音',
@@ -548,6 +551,7 @@
     function getTagClass(typeName) {
         const normalized = normalizeEntryType(typeName);
         const typeMap = {
+            '服事': 'tag-server',
             '配搭': 'tag-pairing',
             '追求': 'tag-pursuit',
             '福音': 'tag-gospel'
