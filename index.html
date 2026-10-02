@@ -497,16 +497,36 @@
     const undoHistory = [];
     const MAX_UNDO_STEPS = 20;
 
-    function getTagClass(typeName) {
+    function normalizeEntryType(typeName) {
         const normalized = (typeName || '').trim();
         const typeMap = {
+            '服事': '服事',
+            '服事者': '服事',
+            '牧養': '服事',
+            '牧養者': '服事',
+            '追求': '追求',
+            '配搭': '配搭',
+            '操練': '配搭',
+            '司琴': '配搭',
+            '帶聚會': '配搭',
+            '福音': '福音',
+            '備註': '福音',
+            '對象': '福音',
+            '關心': '福音',
+            '邀約': '福音',
+            '同學': '福音'
+        };
+
+        return typeMap[normalized] || normalized || '服事';
+    }
+
+    function getTagClass(typeName) {
+        const normalized = normalizeEntryType(typeName);
+        const typeMap = {
             '服事': 'tag-server',
-            '牧養': 'tag-server',
             '追求': 'tag-pursuit',
             '配搭': 'tag-pairing',
-            '福音': 'tag-gospel',
-            '備註': 'tag-gospel',
-            '對象': 'tag-gospel'
+            '福音': 'tag-gospel'
         };
 
         return typeMap[normalized] || 'tag-server';
@@ -514,23 +534,23 @@
 
     function formatEntryContent(name, typeName) {
         const safeName = (name || '新成員').trim() || '新成員';
-        const safeType = (typeName || '服事').trim() || '服事';
+        const safeType = normalizeEntryType(typeName);
         const tagClass = getTagClass(safeType);
         return `${safeName} <span class="badge ${tagClass}">${safeType}</span>`;
     }
 
     function parseEntryInput(rawInput, currentName, currentType) {
         const fallbackName = (currentName || '新成員').trim() || '新成員';
-        const fallbackType = (currentType || '服事').trim() || '服事';
+        const fallbackType = normalizeEntryType(currentType || '服事');
 
         if (!rawInput || !rawInput.trim()) {
             return { name: fallbackName, type: fallbackType };
         }
 
         const cleanedInput = rawInput.trim().replace(/：/g, ':');
-        const parts = cleanedInput.split(/[|/]/).map((part) => part.trim());
+        const parts = cleanedInput.split(/[:|/]/).map((part) => part.trim());
         const name = parts[0] || fallbackName;
-        const type = parts[1] || fallbackType;
+        const type = normalizeEntryType(parts[1] || fallbackType);
 
         return {
             name: name || fallbackName,
@@ -651,9 +671,9 @@
             return;
         }
 
-        const [nameText, typeText = '服事'] = rawInput.split('|').map((part) => part.trim());
+        const [nameText, typeText = '服事'] = rawInput.split(/[:|/]/).map((part) => part.trim());
         const name = nameText || '新成員';
-        const tagType = typeText || '服事';
+        const tagType = normalizeEntryType(typeText || '服事');
         const tagClass = getTagClass(tagType);
 
         pushHistoryState();
