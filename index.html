@@ -199,6 +199,35 @@
             color: #0284c7;
         }
 
+        .entry-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .delete-entry-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            border: 1px solid #fecaca;
+            border-radius: 9999px;
+            background: #fff1f2;
+            color: #b91c1c;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1;
+            cursor: pointer;
+            box-shadow: 0 1px 2px rgba(127, 29, 29, 0.08);
+            flex-shrink: 0;
+        }
+
+        .delete-entry-btn:hover {
+            background: #fee2e2;
+            border-color: #fca5a5;
+        }
+
         /* Interactive toggle arrow symbols */
         .toggle-arrow::before {
             content: "▶ ";
@@ -446,7 +475,10 @@
         const newLi = document.createElement('li');
         newLi.className = 'tree-li';
         newLi.innerHTML = `
-            <div class="node-box leaf-node ${tagClass}">${name} <span class="badge ${tagClass}">${tagType}</span></div>
+            <div class="entry-row">
+                <div class="node-box leaf-node ${tagClass}">${name} <span class="badge ${tagClass}">${tagType}</span></div>
+                <button type="button" class="delete-entry-btn" title="刪除此名單">✕</button>
+            </div>
         `;
 
         if (parentUl) {
@@ -462,6 +494,18 @@
             fallbackList.className = 'tree-ul show';
             fallbackList.appendChild(newLi);
             fallbackContainer.appendChild(fallbackList);
+        }
+    }
+
+    function deletePersonEntry(button) {
+        const entryRow = button.closest('.entry-row');
+        if (!entryRow) {
+            return;
+        }
+
+        const entryLi = entryRow.closest('.tree-li');
+        if (entryLi && entryLi.parentElement) {
+            entryLi.remove();
         }
     }
 
@@ -506,6 +550,15 @@
             });
 
             box.appendChild(addBtn);
+        });
+
+        document.addEventListener('click', function (event) {
+            const target = event.target;
+            if (target && target.matches('.delete-entry-btn')) {
+                event.preventDefault();
+                event.stopPropagation();
+                deletePersonEntry(target);
+            }
         });
     });
 </script>
