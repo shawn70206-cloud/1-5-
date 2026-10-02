@@ -336,6 +336,8 @@
             <p class="text-[11px] text-slate-300">牧養關係總覽 ｜ 點擊節點互動開合 ｜ 紫(配搭) 綠(追求) 橘(福音/備註)</p>
         </div>
         <div class="flex items-center gap-2 text-[11px]">
+            <span id="cloud-sync-status" class="text-slate-300">雲端尚未設定</span>
+            <button id="cloud-auth-btn" type="button" class="px-2 py-1 rounded border border-slate-600 bg-slate-800 text-slate-100 font-semibold">雲端登入</button>
             <button id="undo-action-btn" type="button" class="px-2 py-1 rounded border border-slate-600 bg-slate-800 text-slate-100 font-semibold disabled:opacity-40 disabled:cursor-not-allowed" disabled title="沒有可復原的動作">↶ 復原</button>
             <span class="px-2 py-0.5 rounded bg-purple-900 text-purple-100 border border-purple-700 font-semibold">紫:配搭</span>
             <span class="px-2 py-0.5 rounded bg-green-900 text-green-100 border border-green-700 font-semibold">綠:追求</span>
@@ -532,10 +534,31 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
     const undoHistory = [];
     const MAX_UNDO_STEPS = 20;
     const TREE_STORAGE_KEY = 'life-tree-state-v1';
+    const SUPABASE_URL = 'https://fzaxcvlkwpfodglhgybm.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_2nuKF8_4eOpd7LiSexwYVA_sYS4xF93';
+    let cloudClient = null;
+    let cloudUser = null;
+    let isRestoringCloudState = false;
+    let cloudWriteQueue = Promise.resolve();
+
+    function setCloudStatus(message) {
+        const status = document.getElementById('cloud-sync-status');
+        if (status) {
+            status.textContent = message;
+        }
+    }
+
+    function updateCloudAuthButton() {
+        const button = document.getElementById('cloud-auth-btn');
+        if (button) {
+            button.textContent = cloudUser ? '雲端登出' : '雲端登入';
+        }
+    }
 
     function normalizeLegacyLabels() {
         document.querySelectorAll('.node-box').forEach(function (box) {
@@ -558,11 +581,30 @@
             return;
         }
 
+        const treeHtml = treeContainer.innerHTML;
         try {
-            localStorage.setItem(TREE_STORAGE_KEY, treeContainer.innerHTML);
+            localStorage.setItem(TREE_STORAGE_KEY, treeHtml);
         } catch (error) {
             console.warn('Unable to save tree state:', error);
         }
+
+        if (!cloudClient || !cloudUser || isRestoringCloudState) {
+            return;
+        }
+
+        cloudWriteQueue = cloudWriteQueue.then(async function () {
+            setCloudStatus('雲端儲存中…');
+            const { error } = await cloudClient
+                .from('life_tree_state')
+                .upsert({ id: 'main', tree_html: treeHtml, updated_at: new Date().toISOString() });
+            if (error) {
+                throw error;
+            }
+            setCloudStatus('已同步至雲端');
+        }).catch(function (error) {
+            console.error('Unable to save cloud tree state:', error);
+            setCloudStatus('雲端儲存失敗');
+        });
     }
 
     function restoreTreeState() {
@@ -582,6 +624,84 @@
 
         normalizeLegacyLabels();
         bindTreeInteractions();
+    }
+
+    async function restoreCloudState() {
+        if (!cloudClient || !cloudUser) {
+            return;
+        }
+
+        const treeContainer = document.querySelector('.tree-container');
+        isRestoringCloudState = true;
+        setCloudStatus('載入雲端資料…');
+        try {
+            const { data, error } = await cloudClient
+                .from('life_tree_state')
+                .select('tree_html')
+                .eq('id', 'main')
+                .maybeSingle();
+            if (error) {
+                throw error;
+            }
+
+            if (data) {
+                treeContainer.innerHTML = data.tree_html;
+                normalizeLegacyLabels();
+                bindTreeInteractions();
+            } else {
+                await cloudClient.from('life_tree_state').insert({
+                    id: 'main',
+                    tree_html: treeContainer.innerHTML
+                }).throwOnError();
+            }
+            setCloudStatus('已同步至雲端');
+        } catch (error) {
+            console.error('Unable to load cloud tree state:', error);
+            setCloudStatus('雲端載入失敗，使用本機資料');
+        } finally {
+            isRestoringCloudState = false;
+        }
+    }
+
+    async function handleCloudAuth() {
+        if (!cloudClient) {
+            window.alert('尚未設定 Supabase。請先填入 index.html 中的專案網址與 anon key。');
+            return;
+        }
+
+        if (cloudUser) {
+            const { error } = await cloudClient.auth.signOut();
+            if (error) {
+                setCloudStatus('登出失敗');
+                return;
+            }
+            cloudUser = null;
+            updateCloudAuthButton();
+            setCloudStatus('已登出，修改僅保存在本機');
+            return;
+        }
+
+        const email = window.prompt('請輸入 Supabase 登入信箱');
+        if (!email) {
+            return;
+        }
+        const password = window.prompt('請輸入登入密碼');
+        if (!password) {
+            return;
+        }
+
+        setCloudStatus('登入中…');
+        const { data, error } = await cloudClient.auth.signInWithPassword({ email, password });
+        if (error) {
+            console.error('Supabase sign-in failed:', error);
+            setCloudStatus('登入失敗');
+            window.alert('登入失敗，請確認帳號、密碼與 Supabase 設定。');
+            return;
+        }
+
+        cloudUser = data.user;
+        updateCloudAuthButton();
+        await restoreCloudState();
     }
 
     function normalizeEntryType(typeName) {
@@ -609,7 +729,8 @@
             '同學': '福音'
         };
 
-        return typeMap[normalized] || normalized || '配搭';
+        const categoryPrefix = normalized.split(/[:：]/, 1)[0].trim();
+        return typeMap[normalized] || typeMap[categoryPrefix] || normalized || '配搭';
     }
 
     function getTagClass(typeName) {
@@ -622,6 +743,24 @@
         };
 
         return typeMap[normalized] || 'tag-server';
+    }
+
+    function getEntryType(nodeBox, tagNode) {
+        const badgeType = tagNode ? normalizeEntryType(tagNode.textContent) : '';
+        const knownTypes = ['服事', '配搭', '追求', '福音'];
+        if (knownTypes.includes(badgeType)) {
+            return badgeType;
+        }
+
+        const classTypeMap = {
+            'tag-server': '服事',
+            'tag-pairing': '配搭',
+            'tag-pursuit': '追求',
+            'tag-gospel': '福音'
+        };
+        return Array.from(nodeBox.classList)
+            .map((className) => classTypeMap[className])
+            .find(Boolean) || '配搭';
     }
 
     function formatEntryContent(name, typeName) {
@@ -731,6 +870,11 @@
                 event.preventDefault();
                 event.stopPropagation();
 
+                if (cloudClient && !cloudUser) {
+                    window.alert('請先登入雲端帳號，才能編輯並同步資料。');
+                    return;
+                }
+
                 if (action === 'add') {
                     addPersonEntry(button);
                 } else if (action === 'edit') {
@@ -837,7 +981,7 @@
 
         const nameText = nodeBox.childNodes[0] ? nodeBox.childNodes[0].textContent.trim() : '';
         const tagNode = nodeBox.querySelector('.badge');
-        const currentType = tagNode ? tagNode.textContent.trim() : '配搭';
+        const currentType = getEntryType(nodeBox, tagNode);
         const currentValue = `${nameText || '新成員'} | ${currentType}`;
 
         const rawInput = window.prompt(
@@ -931,12 +1075,47 @@
         persistTreeState();
     }
 
+    async function initializeCloudSync() {
+        const authButton = document.getElementById('cloud-auth-btn');
+        authButton.addEventListener('click', handleCloudAuth);
+
+        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+            setCloudStatus('雲端尚未設定');
+            return;
+        }
+        if (!window.supabase) {
+            setCloudStatus('雲端服務載入失敗');
+            return;
+        }
+
+        cloudClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const { data, error } = await cloudClient.auth.getSession();
+        if (error) {
+            console.error('Unable to restore Supabase session:', error);
+            setCloudStatus('雲端登入狀態讀取失敗');
+            return;
+        }
+
+        cloudUser = data.session ? data.session.user : null;
+        updateCloudAuthButton();
+        if (cloudUser) {
+            await restoreCloudState();
+        } else {
+            setCloudStatus('未登入，修改無法同步');
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         restoreTreeState();
+        initializeCloudSync();
 
         const undoButton = document.getElementById('undo-action-btn');
         if (undoButton) {
             undoButton.addEventListener('click', function () {
+                if (cloudClient && !cloudUser) {
+                    window.alert('請先登入雲端帳號，才能編輯並同步資料。');
+                    return;
+                }
                 restorePreviousState();
             });
         }
