@@ -778,10 +778,11 @@
             return { name: fallbackName, type: fallbackType };
         }
 
-        const cleanedInput = rawInput.trim().replace(/：/g, ':');
-        const parts = cleanedInput.split(/[:|/]/).map((part) => part.trim());
-        const name = parts[0] || fallbackName;
-        const type = normalizeEntryType(parts[1] || fallbackType);
+        const separatorIndex = rawInput.indexOf('|');
+        const namePart = separatorIndex === -1 ? rawInput : rawInput.slice(0, separatorIndex);
+        const typePart = separatorIndex === -1 ? fallbackType : rawInput.slice(separatorIndex + 1);
+        const name = namePart.trim() || fallbackName;
+        const type = normalizeEntryType(typePart.trim() || fallbackType);
 
         return {
             name: name || fallbackName,
@@ -979,7 +980,8 @@
             return;
         }
 
-        const nameText = nodeBox.childNodes[0] ? nodeBox.childNodes[0].textContent.trim() : '';
+        const nameText = (nodeBox.childNodes[0] ? nodeBox.childNodes[0].textContent.trim() : '')
+            .replace(/^(?:全時間配搭|服事者?|牧養者?|全時間|追求|配搭|操練|司琴|帶聚會|餅杯|奉獻箱|小杯|福音|備註|對象|關心|邀約|同學)\s*[：:]\s*/, '');
         const tagNode = nodeBox.querySelector('.badge');
         const currentType = getEntryType(nodeBox, tagNode);
         const currentValue = `${nameText || '新成員'} | ${currentType}`;
