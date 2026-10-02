@@ -506,6 +506,25 @@
         return `${safeName} <span class="badge ${tagClass}">${safeType}</span>`;
     }
 
+    function parseEntryInput(rawInput, currentName, currentType) {
+        const fallbackName = (currentName || '新成員').trim() || '新成員';
+        const fallbackType = (currentType || '服事').trim() || '服事';
+
+        if (!rawInput || !rawInput.trim()) {
+            return { name: fallbackName, type: fallbackType };
+        }
+
+        const cleanedInput = rawInput.trim().replace(/：/g, ':');
+        const parts = cleanedInput.split(/[|/]/).map((part) => part.trim());
+        const name = parts[0] || fallbackName;
+        const type = parts[1] || fallbackType;
+
+        return {
+            name: name || fallbackName,
+            type: type || fallbackType
+        };
+    }
+
     function updateUndoButton() {
         const undoButton = document.getElementById('undo-action-btn');
         if (!undoButton) {
@@ -689,16 +708,17 @@
         const nameText = nodeBox.childNodes[0] ? nodeBox.childNodes[0].textContent.trim() : '';
         const tagNode = nodeBox.querySelector('.badge');
         const currentType = tagNode ? tagNode.textContent.trim() : '服事';
-        const currentValue = `${nameText} | ${currentType}`;
+        const currentValue = `${nameText || '新成員'} | ${currentType}`;
 
-        const rawInput = window.prompt('編輯名單（格式：姓名 | 類別）', currentValue);
+        const rawInput = window.prompt(
+            `編輯名單\n格式：姓名 | 類別\n例如：王小明 | 服事\n可用類別：服事 / 追求 / 配搭 / 福音\n目前：${currentValue}`,
+            currentValue
+        );
         if (!rawInput) {
             return;
         }
 
-        const [newName, newType = '服事'] = rawInput.split('|').map((part) => part.trim());
-        const safeName = newName || nameText || '新成員';
-        const safeType = newType || currentType || '服事';
+        const { name: safeName, type: safeType } = parseEntryInput(rawInput, nameText, currentType);
         const tagClass = getTagClass(safeType);
 
         pushHistoryState();
