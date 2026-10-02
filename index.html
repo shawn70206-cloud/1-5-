@@ -717,7 +717,11 @@
 
     // Toggle Sub-node branch expansion
     function toggleSub(nodeBoxElem) {
-        const treeLi = nodeBoxElem.parentElement;
+        const treeLi = nodeBoxElem.closest('.tree-li');
+        if (!treeLi) {
+            return;
+        }
+
         treeLi.classList.toggle('expanded');
         const subUl = treeLi.querySelector(':scope > ul');
         if (subUl) {
