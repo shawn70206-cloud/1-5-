@@ -550,6 +550,20 @@
         updateUndoButton();
     }
 
+    function getEntryRowFromButton(button) {
+        if (!button) {
+            return null;
+        }
+
+        const nearestRow = button.closest('.entry-row');
+        if (nearestRow) {
+            return nearestRow;
+        }
+
+        const nodeBox = button.closest('.node-box');
+        return nodeBox ? nodeBox.parentElement : null;
+    }
+
     function bindEntryClicks(container) {
         const buttons = container.querySelectorAll('.add-entry-btn, .edit-entry-btn, .delete-entry-btn');
         buttons.forEach(function (button) {
@@ -634,12 +648,12 @@
     }
 
     function deletePersonEntry(button) {
-        const entryRow = button.closest('.entry-row');
+        const entryRow = getEntryRowFromButton(button);
         if (!entryRow) {
             return;
         }
 
-        const nodeBox = entryRow.querySelector('.node-box');
+        const nodeBox = entryRow.querySelector('.node-box') || button.closest('.node-box');
         const nameText = nodeBox ? (nodeBox.childNodes[0] ? nodeBox.childNodes[0].textContent.trim() : '此名單') : '此名單';
         const confirmed = window.confirm(`確定要刪除「${nameText}」嗎？\n此動作可用復原功能回復。`);
         if (!confirmed) {
@@ -655,12 +669,12 @@
     }
 
     function editPersonEntry(button) {
-        const entryRow = button.closest('.entry-row');
+        const entryRow = getEntryRowFromButton(button);
         if (!entryRow) {
             return;
         }
 
-        const nodeBox = entryRow.querySelector('.node-box');
+        const nodeBox = entryRow.querySelector('.node-box') || button.closest('.node-box');
         if (!nodeBox) {
             return;
         }
@@ -709,9 +723,19 @@
             return;
         }
 
-        if (box.querySelector('.entry-control-bar')) {
+        if (box.closest('.entry-row')) {
             return;
         }
+
+        const row = document.createElement('div');
+        row.className = 'entry-row';
+
+        const parent = box.parentElement;
+        if (parent) {
+            parent.insertBefore(row, box);
+        }
+
+        row.appendChild(box);
 
         const bar = document.createElement('span');
         bar.className = 'entry-control-bar';
@@ -740,8 +764,8 @@
         bar.appendChild(addBtn);
         bar.appendChild(editBtn);
         bar.appendChild(deleteBtn);
-        box.appendChild(bar);
-        bindEntryClicks(bar);
+        row.appendChild(bar);
+        bindEntryClicks(row);
     }
 
     document.addEventListener('DOMContentLoaded', function () {
