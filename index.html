@@ -499,6 +499,13 @@
         return typeMap[normalized] || 'tag-server';
     }
 
+    function formatEntryContent(name, typeName) {
+        const safeName = (name || '新成員').trim() || '新成員';
+        const safeType = (typeName || '服事').trim() || '服事';
+        const tagClass = getTagClass(safeType);
+        return `${safeName} <span class="badge ${tagClass}">${safeType}</span>`;
+    }
+
     function updateUndoButton() {
         const undoButton = document.getElementById('undo-action-btn');
         if (!undoButton) {
@@ -623,7 +630,7 @@
         newLi.className = 'tree-li';
         newLi.innerHTML = `
             <div class="entry-row">
-                <div class="node-box leaf-node ${tagClass}">${name} <span class="badge ${tagClass}">${tagType}</span></div>
+                <div class="node-box leaf-node ${tagClass}">${formatEntryContent(name, tagType)}</div>
                 <button type="button" class="edit-entry-btn" data-action="edit" title="編輯此名單">✎</button>
                 <button type="button" class="delete-entry-btn" data-action="delete" title="刪除此名單">✕</button>
             </div>
@@ -696,7 +703,7 @@
 
         pushHistoryState();
         nodeBox.className = `node-box leaf-node ${tagClass}`;
-        nodeBox.innerHTML = `${safeName} <span class="badge ${tagClass}">${safeType}</span>`;
+        nodeBox.innerHTML = formatEntryContent(safeName, safeType);
     }
 
     // Toggle Core Leader branch expansion
