@@ -174,6 +174,31 @@
             font-weight: 700;
         }
 
+        .add-entry-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            margin-left: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 9999px;
+            background: #ffffff;
+            color: #0f172a;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1;
+            cursor: pointer;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+            flex-shrink: 0;
+        }
+
+        .add-entry-btn:hover {
+            background: #f0f9ff;
+            border-color: #0284c7;
+            color: #0284c7;
+        }
+
         /* Interactive toggle arrow symbols */
         .toggle-arrow::before {
             content: "▶ ";
@@ -384,6 +409,62 @@
 </div>
 
 <script>
+    function getTagClass(typeName) {
+        const normalized = (typeName || '').trim();
+        const typeMap = {
+            '服事': 'tag-server',
+            '牧養': 'tag-server',
+            '追求': 'tag-pursuit',
+            '配搭': 'tag-pairing',
+            '福音': 'tag-gospel',
+            '備註': 'tag-gospel',
+            '對象': 'tag-gospel'
+        };
+
+        return typeMap[normalized] || 'tag-server';
+    }
+
+    function addPersonEntry(button) {
+        const nodeBox = button.closest('.node-box');
+        const treeLi = nodeBox ? nodeBox.closest('.tree-li') : null;
+        const parentUl = treeLi ? treeLi.querySelector(':scope > ul') : null;
+
+        const rawInput = window.prompt(
+            '新增名單（格式：姓名 | 類別）\n例如：王小明 | 服事\n可用類別：服事 / 追求 / 配搭 / 福音',
+            '新成員 | 服事'
+        );
+
+        if (!rawInput) {
+            return;
+        }
+
+        const [nameText, typeText = '服事'] = rawInput.split('|').map((part) => part.trim());
+        const name = nameText || '新成員';
+        const tagType = typeText || '服事';
+        const tagClass = getTagClass(tagType);
+
+        const newLi = document.createElement('li');
+        newLi.className = 'tree-li';
+        newLi.innerHTML = `
+            <div class="node-box leaf-node ${tagClass}">${name} <span class="badge ${tagClass}">${tagType}</span></div>
+        `;
+
+        if (parentUl) {
+            parentUl.appendChild(newLi);
+        } else if (treeLi && treeLi.parentElement) {
+            const newUl = document.createElement('ul');
+            newUl.className = 'tree-ul show';
+            newUl.appendChild(newLi);
+            treeLi.appendChild(newUl);
+        } else {
+            const fallbackContainer = document.querySelector('.tree-container');
+            const fallbackList = document.createElement('ul');
+            fallbackList.className = 'tree-ul show';
+            fallbackList.appendChild(newLi);
+            fallbackContainer.appendChild(fallbackList);
+        }
+    }
+
     // Toggle Core Leader branch expansion
     function toggleCore(element, branchId) {
         element.classList.toggle('expanded');
@@ -402,6 +483,31 @@
             subUl.classList.toggle('show');
         }
     }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.node-box').forEach(function (box) {
+            if (box.classList.contains('root-node')) {
+                return;
+            }
+
+            if (box.querySelector('.add-entry-btn')) {
+                return;
+            }
+
+            const addBtn = document.createElement('button');
+            addBtn.type = 'button';
+            addBtn.className = 'add-entry-btn';
+            addBtn.title = '新增名單';
+            addBtn.textContent = '＋';
+            addBtn.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                addPersonEntry(addBtn);
+            });
+
+            box.appendChild(addBtn);
+        });
+    });
 </script>
 
 </body>
