@@ -546,6 +546,13 @@
             return;
         }
 
+        const nodeBox = entryRow.querySelector('.node-box');
+        const nameText = nodeBox ? (nodeBox.childNodes[0] ? nodeBox.childNodes[0].textContent.trim() : '此名單') : '此名單';
+        const confirmed = window.confirm(`確定要刪除「${nameText}」嗎？\n此動作無法復原。`);
+        if (!confirmed) {
+            return;
+        }
+
         const entryLi = entryRow.closest('.tree-li');
         if (entryLi && entryLi.parentElement) {
             entryLi.remove();
