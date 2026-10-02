@@ -902,7 +902,7 @@
         const parentUl = treeLi ? treeLi.querySelector(':scope > ul') : null;
 
         const rawInput = window.prompt(
-            '新增名單（格式：姓名 | 類別）\n例如：王小明 | 配搭\n可用類別：配搭 / 追求 / 福音',
+            '新增：姓名 | 類別（配搭、追求、服事、福音）',
             '新成員 | 配搭'
         );
 
@@ -910,9 +910,7 @@
             return;
         }
 
-        const [nameText, typeText = '配搭'] = rawInput.split(/[:|/]/).map((part) => part.trim());
-        const name = nameText || '新成員';
-        const tagType = normalizeEntryType(typeText || '配搭');
+        const { name, type: tagType } = parseEntryInput(rawInput, '新成員', '配搭');
         const tagClass = getTagClass(tagType);
 
         pushHistoryState();
@@ -987,7 +985,7 @@
         const currentValue = `${nameText || '新成員'} | ${currentType}`;
 
         const rawInput = window.prompt(
-            `編輯名單\n格式：姓名 | 類別\n例如：王小明 | 配搭\n可用類別：配搭 / 追求 / 福音\n目前：${currentValue}`,
+            '編輯：姓名 | 類別（配搭、追求、服事、福音）',
             currentValue
         );
         if (!rawInput) {
