@@ -500,10 +500,10 @@
     function normalizeEntryType(typeName) {
         const normalized = (typeName || '').trim();
         const typeMap = {
-            '服事': '服事',
-            '服事者': '服事',
-            '牧養': '服事',
-            '牧養者': '服事',
+            '服事': '配搭',
+            '服事者': '配搭',
+            '牧養': '配搭',
+            '牧養者': '配搭',
             '追求': '追求',
             '配搭': '配搭',
             '操練': '配搭',
@@ -523,9 +523,8 @@
     function getTagClass(typeName) {
         const normalized = normalizeEntryType(typeName);
         const typeMap = {
-            '服事': 'tag-server',
-            '追求': 'tag-pursuit',
             '配搭': 'tag-pairing',
+            '追求': 'tag-pursuit',
             '福音': 'tag-gospel'
         };
 
@@ -541,7 +540,7 @@
 
     function parseEntryInput(rawInput, currentName, currentType) {
         const fallbackName = (currentName || '新成員').trim() || '新成員';
-        const fallbackType = normalizeEntryType(currentType || '服事');
+        const fallbackType = normalizeEntryType(currentType || '配搭');
 
         if (!rawInput || !rawInput.trim()) {
             return { name: fallbackName, type: fallbackType };
@@ -671,9 +670,9 @@
             return;
         }
 
-        const [nameText, typeText = '服事'] = rawInput.split(/[:|/]/).map((part) => part.trim());
+        const [nameText, typeText = '配搭'] = rawInput.split(/[:|/]/).map((part) => part.trim());
         const name = nameText || '新成員';
-        const tagType = normalizeEntryType(typeText || '服事');
+        const tagType = normalizeEntryType(typeText || '配搭');
         const tagClass = getTagClass(tagType);
 
         pushHistoryState();
