@@ -859,11 +859,11 @@
     function bindEntryClicks(container) {
         const buttons = container.querySelectorAll('.add-entry-btn, .edit-entry-btn, .delete-entry-btn');
         buttons.forEach(function (button) {
-            if (button.dataset.bound === 'true') {
+            if (button.__entryClickBound) {
                 return;
             }
 
-            button.dataset.bound = 'true';
+            button.__entryClickBound = true;
             const action = button.dataset.action || 'custom';
 
             button.addEventListener('click', function (event) {
