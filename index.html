@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1-5互動式生命樹狀圖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 16:9 Widescreen Presentation Box Container */
+        .widescreen-frame {
+            width: 100vw;
+            height: 56.25vw; /* Strict 16:9 Aspect Ratio */
+            max-width: 100vh * (16/9);
+            max-height: 100vh;
+            background: #ffffff;
+            color: #0f172a;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .content-scroll {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: auto;
+            padding: 16px 24px;
+        }
+
+        .tree-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
+        .tree-ul {
+            list-style-type: none;
+            position: relative;
+            padding-left: 20px;
+            margin: 3px 0;
+            display: none; /* Collapsed by default for interactive experience */
+        }
+        .tree-ul.show {
+            display: block;
+        }
+        .tree-li {
+            margin: 4px 0;
+            position: relative;
+        }
+
+        /* Connecting connector lines */
+        .tree-li::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -12px;
+            border-left: 2px solid #94a3b8;
+            border-bottom: 2px solid #94a3b8;
+            width: 12px;
+            height: 10px;
+        }
+        .tree-li::after {
+            content: "";
+            position: absolute;
+            top: 10px;
+            left: -12px;
+            border-left: 2px solid #94a3b8;
+            width: 2px;
+            height: 100%;
+        }
+        .tree-li:last-child::after {
+            display: none;
+        }
+
+        .node-box {
+            display: inline-flex;
+            align-items: center;
+            background: #ffffff;
+            padding: 5px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid #cbd5e1;
+            font-size: 13px;
+            font-weight: 700;
+            color: #0f172a;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            white-space: nowrap;
+        }
+        .node-box:hover {
+            border-color: #0284c7;
+            background: #f0f9ff;
+            transform: translateY(-1px);
+        }
+
+        /* Root Node */
+        .root-node {
+            background: #0f172a;
+            color: #ffffff;
+            border: none;
+            font-size: 15px;
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: default;
+            box-shadow: 0 4px 6px rgba(15, 23, 42, 0.25);
+        }
+
+        /* Core Leader Nodes (Tier 2) */
+        .core-node {
+            background: #1e293b;
+            color: #ffffff;
+            border: none;
+            font-size: 13px;
+            padding: 7px 14px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+        .core-node:hover {
+            background: #334155;
+            color: #ffffff;
+        }
+
+        /* Leaf or standard node */
+        .leaf-node {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            font-weight: 600;
+            color: #1e293b;
+            cursor: default;
+        }
+
+        /* SYSTEMIZED COLOR-CODED TAGS (High contrast dark text) */
+        .tag-server {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+        }
+        .tag-pursuit {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #86efac;
+        }
+        .tag-pairing {
+            background: #f3e8ff;
+            color: #6b21a8;
+            border: 1px solid #d8b4fe;
+        }
+        .tag-gospel {
+            background: #ffedd5;
+            color: #9a3412;
+            border: 1px solid #fed7aa;
+        }
+        
+        .badge {
+            font-size: 11px;
+            margin-left: 6px;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+
+        /* Interactive toggle arrow symbols */
+        .toggle-arrow::before {
+            content: "▶ ";
+            font-size: 9px;
+            color: #0284c7;
+            margin-right: 4px;
+        }
+        .tree-li.expanded > .node-box > .toggle-arrow::before,
+        .core-node.expanded > .toggle-arrow::before {
+            content: "▼ ";
+        }
+        .leaf-node .toggle-arrow::before {
+            content: "";
+        }
+    </style>
+</head>
+<body>
+
+<div class="widescreen-frame">
+    <header class="bg-slate-900 text-white px-5 py-3 flex justify-between items-center shrink-0">
+        <div>
+            <h1 class="text-base font-bold tracking-wide">1-5互動式生命樹狀圖</h1>
+            <p class="text-[11px] text-slate-300">16:9 寬螢幕適配 ｜ 點擊節點互動開合 ｜ 藍(服事) 綠(追求) 紫(配搭) 橘(福音/備註)</p>
+        </div>
+        <div class="flex gap-1.5 text-[11px]">
+            <span class="px-2 py-0.5 rounded bg-blue-900 text-blue-100 border border-blue-700 font-semibold">藍:服事</span>
+            <span class="px-2 py-0.5 rounded bg-green-900 text-green-100 border border-green-700 font-semibold">綠:追求</span>
+            <span class="px-2 py-0.5 rounded bg-purple-900 text-purple-100 border border-purple-700 font-semibold">紫:配搭</span>
+            <span class="px-2 py-0.5 rounded bg-orange-900 text-orange-100 border border-orange-700 font-semibold">橘:福音</span>
+        </div>
+    </header>
+
+    <div class="content-scroll">
+        <div class="tree-container">
+            
+            <!-- Tier 1: Root Title -->
+            <div class="node-box root-node mb-3">1-5生命樹狀圖總覽</div>
+            <div class="w-0.5 h-3 bg-slate-300 my-1"></div>
+
+            <!-- Tier 2: 6 Core Leaders (Horizontal Layout) -->
+            <div class="flex flex-wrap justify-center gap-4 my-2 w-full">
+                
+                <!-- 1. 黃吉安B -->
+                <div class="flex flex-col items-center">
+                    <div class="node-box core-node toggle-arrow" onclick="toggleCore(this, 'huang-branch')">黃吉安B</div>
+                    <ul class="tree-ul mt-2 text-left" id="huang-branch">
+                        <li class="tree-li"><div class="node-box leaf-node tag-server">服事者：振芳B、巧迷S</div></li>
+                        <li class="tree-li"><div class="node-box leaf-node tag-pursuit">追求：晨興、生命讀經</div></li>
+                        <li class="tree-li"><div class="node-box leaf-node tag-pairing">配搭：帶聚會、餅杯、奉獻箱</div></li>
+                        <li class="tree-li">
+                            <div class="node-box toggle-arrow" onclick="toggleSub(this)"><span class="toggle-arrow"></span>陳世傑B</div>
+                            <ul class="tree-ul">
+                                <li class="tree-li"><div class="node-box leaf-node tag-server">服事者：吉安</div></li>
+                                <li class="tree-li"><div class="node-box leaf-node tag-pairing">配搭：餅杯、奉獻箱</div></li>
+                                <li class="tree-li"><div class="node-box leaf-node tag-pursuit">追求：偶而禱告</div></li>
+                                <li class="tree-li"><div class="node-box leaf-node tag-gospel">高源凱 <span class="badge tag-gospel">偶而聯繫</span></div></li>
+                            </ul>
+                        </li>
+                        <!-- Tier 3 precise placement under Huang Ji-an -->
+                        <li class="tree-li"><div class="node-box leaf-node tag-gospel">羅睿竹 <span class="badge tag-gospel">世新資管1 - 新接觸福音朋友</span></div></li>
+                        <li class="tree-li"><div class="node-box leaf-node tag-gospel">林韋志B <span class="badge tag-gospel">日常互動關心 (劉佩怡、林士宸、林佑勳)</span></div></li>
+                        <li class="tree-li"><div class="node-box leaf-node tag-gospel">郭權弘 <span class="badge tag-gospel">偶而聯繫</span></div></li>
+                        <li class="tree-li"><div class="node-box leaf-node tag-gospel">廖誼青 <span class="badge tag-gospel">偶而聯繫 / 正在邀約家聚會</span></div></li>
+                        <li class="tree-li"><div class="node-box leaf-node tag-gospel">黃吉隆B <span class="badge tag-gospel">久未探望</span></div></li>
+                    </ul>
+                </div>
+
+                <!-- 2. 許玉慧S -->
+                <div class="flex flex-col items-center">
+                    <div class="node-box core-node toggle-arrow" onclick="toggleCore(this, 'xu-branch')">許玉慧S</div>
+                    <ul class="tree-ul mt-2 text-left" id="xu-branch">
+                        <li class="tree-li"><div class="node-box leaf-node tag-server">服事者：振芳B、巧迷S</div></li>
+                        <li class="tree-li"><div class="node-box leaf-node tag-pursuit">追求：晨興、禱告</div></li>
+                        <li class="tree-li"><div class="node-box leaf-node tag-pairing">配搭：小杯</div></li>
+                        <li class="tree-li">
+                            <div class="node-box toggle-arrow" onclick="toggleSub(this)"><span class="toggle-arrow"></span>鄧娟娟S</div>
+                            <ul class="tree-ul">
+                                <li class="tree-li"><div class="node-box leaf-node tag-server">服事者：繼華S、玉慧S、正惠S</div></li>
+                                <li class="tree-li"><div class="node-box leaf-node tag-pursuit">追求：晨興、禱告 | 配搭：小杯</div></li>
+                                <li class="tree-li">
+                                    <div class="node-box toggle-arrow" onclick="toggleSub(this)"><span class="toggle-arrow"></span>陳羽芳S</div>
+                                    <ul class="tree-ul">
+                                        <li class="tree-li"><div class="node-box leaf-node tag-server">服事：娟娟 | 追求：禱告</div></li>
+                                    </ul>
+                                </li>
+                                <li class="tree-li"><div class="node-box leaf-node tag-gospel">蔡昕霓S <span class="badge tag-gospel">日常互動關心</span></div></li>
+                                <li class="tree-li"><div class="node-box leaf-node tag-gospel">李子慧 <span class="badge tag-gospel">日常互動關心</span></div></li>
+                            </ul>
+                        </li>
+                        <li class="tree-li">
+                            <div class="node-box toggle-arrow" onclick="toggleSub(this)"><span class="toggle-arrow"></span>陳逸杰B</div>
+                            <ul class="tree-ul">
+                                <li class="tree-li"><div class="node-box leaf-node tag-server">服事者：吉安B、玉慧S</div></li>
+                                <li class="tree-li"><div class="node-box leaf-node tag-pursuit">追求：晨興 (不穩定)</div></li>
+                            </ul>
+                        </li>
+                        <li class="tree-li"><div class="node-box leaf-node tag-server">林佳怡S <span class="badge tag-server">服事者：玉慧S</span></div></li>
+                    </ul>
+                </div>
+
+                <!-- 3. 周繼華S -->
+                <div class="flex flex-col items-center">
+                    <div class="node-box core-node toggle-arrow" onclick="toggleCore(this, 'chou-branch')">周繼華S</div>
+                    <ul class="tree-ul mt-2 text-left" id="chou-branch">
+                        <li class="tree-li"><div class="node-box leaf-node tag-server">服事者：振芳B、巧迷S</div></li>
+                        <li class="tree-li"><div class="node-box leaf-node tag-pursuit">追求：晨興、生命讀經、聖經、禱告</div></li>
+                        <li class="tree-li"><div class="node-box leaf-node tag-server">悠洋‧那麼好S <span class="badge tag-server">服事：繼華</span> | <span class="badge tag-pursuit">晨興、生命讀經</span></div></li>
+                        <li class="tree-li"><div class="node-box leaf-node tag-server">李綽穎 <span class="badge tag-server">服事：繼華</span> | <span class="badge tag-pursuit">晨興、禱告</span></div></li>
+                        <li class="tree-li"><div class="node-box leaf-node tag-gospel">陳思妤 <span class="badge tag-gospel">世新資傳1 - 新接觸福音朋友</span></div></li>
+                        <li class="tree-li"><div class="node-box leaf-node tag-gospel">林汶君S <span class="badge tag-gospel">久未探望</span> | <span class="badge tag-server">服事：繼華</span></div></li>
+                    </ul>
+                </div>
+
+                <!-- 4. 張紹恩B -->
+                <div class="flex flex-col items-center">
+                    <div class="node-box core-node toggle-arrow" onclick="toggleCore(this, 'chang-branch')">張紹恩B</div>
+                    <ul class="tree-ul mt-2 text-left" id="chang-branch">
+                        <li class="tree-li"><div class="node-box leaf-node tag-server">服事：恩德B | <span class="badge tag-pursuit">晨興</span> | <span class="badge tag-pairing">帶聚會</span></div></li>
+                        <li class="tree-li">
+                            <div class="node-box toggle-arrow" onclick="toggleSub(this)"><span class="toggle-arrow"></span>葉修誠B</div>
+                            <ul class="tree-ul">
+                                <li class="tree-li"><div class="node-box leaf-node tag-server">服事：紹恩B、吉安B</div></li>
+                                <li class="tree-li"><div class="node-box leaf-node tag-pursuit">生命讀經、英文聖經 | <span class="badge tag-pairing">操練申言</span></div></li>
+                            </ul>
+                        </li>
+                        <li class="tree-li">
+                            <div class="node-box toggle-arrow" onclick="toggleSub(this)"><span class="toggle-arrow"></span>劉瑄B</div>
+                            <ul class="tree-ul">
+                                <li class="tree-li"><div class="node-box leaf-node tag-server">服事：紹恩B、恩德B | <span class="badge tag-pursuit">晨興(0~1)</span></div></li>
+                                <li class="tree-li"><div class="node-box leaf-node tag-gospel">胡蘇珊S <span class="badge tag-gospel">劉瑄媽 - 剛恢復花蓮主日</span></div></li>
+                            </ul>
+                        </li>
+                        <li class="tree-li"><div class="node-box leaf-node tag-gospel">葉聖榮 <span class="badge tag-gospel">服事：紹恩B - 持續接觸</span></div></li>
+                        <li class="tree-li"><div class="node-box leaf-node tag-pairing">林文強B、李晏奇、王祐恩 <span class="badge tag-pairing">家聚會 1周多次</span></div></li>
+                        <li class="tree-li"><div class="node-box leaf-node tag-gospel">邱祥瑀、吳承憲 <span class="badge tag-gospel">偶而/持續接觸</span></div></li>
+                    </ul>
+                </div>
+
+                <!-- 5. 黃正惠S (全時間) -->
+                <div class="flex flex-col items-center">
+                    <div class="node-box core-node toggle-arrow" onclick="toggleCore(this, 'huangz-branch')">黃正惠S <span class="badge bg-amber-500 text-white ml-1 font-semibold">全時間</span></div>
+                    <ul class="tree-ul mt-2 text-left" id="huangz-branch">
+                        <li class="tree-li">
+                            <div class="node-box toggle-arrow" onclick="toggleSub(this)"><span class="toggle-arrow"></span>胡弈婕S</div>
+                            <ul class="tree-ul">
+                                <li class="tree-li"><div class="node-box leaf-node tag-server">服事：正惠S | <span class="badge tag-pursuit">晨興</span> | <span class="badge tag-pairing">司琴</span></div></li>
+                                <li class="tree-li"><div class="node-box leaf-node tag-gospel">柯芷誼S、翁莉媛S <span class="badge tag-gospel">久未探望</span></div></li>
+                            </ul>
+                        </li>
+                        <li class="tree-li"><div class="node-box leaf-node tag-gospel">陳宇真S <span class="badge tag-gospel">久未探望 / 邀約中</span></div></li>
+                        <li class="tree-li">
+                            <div class="node-box toggle-arrow" onclick="toggleSub(this)"><span class="toggle-arrow"></span>張恩臨S</div>
+                            <ul class="tree-ul">
+                                <li class="tree-li"><div class="node-box leaf-node tag-server">服事：正惠S | <span class="badge tag-pursuit">晨興</span> | <span class="badge tag-pairing">司琴</span></div></li>
+                                <li class="tree-li"><div class="node-box leaf-node tag-server">余倢 <span class="badge tag-server">服事：正惠、玉慧</span></div></li>
+                                <li class="tree-li"><div class="node-box leaf-node tag-server">粘凱柔S <span class="badge tag-server">服事：繼華</span> | <span class="badge tag-pursuit">牧養材料</span></div></li>
+                                <li class="tree-li"><div class="node-box leaf-node tag-gospel">謝涵妤、Lulu <span class="badge tag-gospel">同學 - 持續連繫</span></div></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- 6. 湯恩德B (全時間) -->
+                <div class="flex flex-col items-center">
+                    <div class="node-box core-node toggle-arrow" onclick="toggleCore(this, 'tang-branch')">湯恩德B <span class="badge bg-amber-500 text-white ml-1 font-semibold">全時間</span></div>
+                    <ul class="tree-ul mt-2 text-left" id="tang-branch">
+                        <li class="tree-li"><div class="node-box leaf-node tag-server">全時間服事者 (專職推動區內牧養)</div></li>
+                    </ul>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Toggle Core Leader branch expansion
+    function toggleCore(element, branchId) {
+        element.classList.toggle('expanded');
+        const branchUl = document.getElementById(branchId);
+        if (branchUl) {
+            branchUl.classList.toggle('show');
+        }
+    }
+
+    // Toggle Sub-node branch expansion
+    function toggleSub(nodeBoxElem) {
+        const treeLi = nodeBoxElem.parentElement;
+        treeLi.classList.toggle('expanded');
+        const subUl = treeLi.querySelector(':scope > ul');
+        if (subUl) {
+            subUl.classList.toggle('show');
+        }
+    }
+</script>
+
+</body>
+</html>
