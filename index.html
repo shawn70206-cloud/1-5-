@@ -200,6 +200,77 @@
             letter-spacing: 0.02em;
         }
 
+        .entry-editor-dialog {
+            width: min(92vw, 440px);
+            max-height: 85vh;
+            padding: 0;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            color: #0f172a;
+            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+        }
+
+        .entry-editor-dialog::backdrop {
+            background: rgba(15, 23, 42, 0.55);
+        }
+
+        .entry-editor-form {
+            display: grid;
+            gap: 14px;
+            padding: 20px;
+        }
+
+        .entry-editor-fields {
+            display: grid;
+            gap: 10px;
+            max-height: 55vh;
+            overflow-y: auto;
+        }
+
+        .entry-editor-field {
+            display: grid;
+            gap: 5px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .entry-editor-field input,
+        .entry-editor-field select {
+            width: 100%;
+            min-height: 38px;
+            padding: 7px 9px;
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+            background: #fff;
+            color: #0f172a;
+            font: inherit;
+            font-weight: 500;
+        }
+
+        .entry-editor-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .entry-editor-actions button {
+            min-height: 36px;
+            padding: 7px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+            background: #fff;
+            color: #334155;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .entry-editor-actions button[type="submit"] {
+            border-color: #1d4ed8;
+            background: #1d4ed8;
+            color: #fff;
+        }
+
         .entry-control-bar {
             display: inline-flex;
             align-items: center;
@@ -534,6 +605,30 @@
     </div>
 </div>
 
+<dialog id="entry-editor-dialog" class="entry-editor-dialog" aria-labelledby="entry-editor-title">
+    <form id="entry-editor-form" class="entry-editor-form">
+        <h2 id="entry-editor-title" class="text-base font-bold">編輯內容</h2>
+        <div class="entry-editor-fields">
+            <label class="entry-editor-field">主文字
+                <input id="entry-main-text" type="text" required>
+            </label>
+            <div id="entry-badge-fields" class="grid gap-2"></div>
+            <label class="entry-editor-field">分類
+                <select id="entry-category">
+                    <option value="配搭">配搭</option>
+                    <option value="追求">追求</option>
+                    <option value="服事">服事</option>
+                    <option value="福音">福音</option>
+                </select>
+            </label>
+        </div>
+        <div class="entry-editor-actions">
+            <button id="entry-editor-cancel" type="button">取消</button>
+            <button type="submit">儲存</button>
+        </div>
+    </form>
+</dialog>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
     const undoHistory = [];
@@ -545,6 +640,7 @@
     let cloudUser = null;
     let isRestoringCloudState = false;
     let cloudWriteQueue = Promise.resolve();
+    let editingEntry = null;
 
     function setCloudStatus(message) {
         const status = document.getElementById('cloud-sync-status');
@@ -978,49 +1074,98 @@
             return;
         }
 
-        const nameText = (nodeBox.childNodes[0] ? nodeBox.childNodes[0].textContent.trim() : '')
-            .replace(/^(?:全時間配搭|服事者?|牧養者?|全時間|追求|配搭|操練|司琴|帶聚會|餅杯|奉獻箱|小杯|福音|備註|對象|關心|邀約|同學)\s*[：:]\s*/, '');
-        const tagNode = nodeBox.querySelector('.badge');
-        const currentType = getEntryType(nodeBox, tagNode);
-        const currentValue = `${nameText || '新成員'} | ${currentType}`;
-
-        const rawInput = window.prompt(
-            '編輯：姓名 | 類別（配搭、追求、服事、福音）',
-            currentValue
-        );
-        if (!rawInput) {
-            return;
-        }
-
-        const { name: safeName, type: safeType } = parseEntryInput(rawInput, nameText, currentType);
-        const tagClass = getTagClass(safeType);
-
-        pushHistoryState();
-        const categoryClasses = ['tag-server', 'tag-pairing', 'tag-pursuit', 'tag-gospel'];
-        nodeBox.classList.remove(...categoryClasses);
-        nodeBox.classList.add(tagClass);
-
+        const dialog = document.getElementById('entry-editor-dialog');
+        const mainTextField = document.getElementById('entry-main-text');
+        const badgeFields = document.getElementById('entry-badge-fields');
+        const categoryField = document.getElementById('entry-category');
         const directTextNode = Array.from(nodeBox.childNodes)
-            .find((child) => child.nodeType === Node.TEXT_NODE && child.textContent.trim());
-        if (directTextNode) {
-            directTextNode.textContent = `${safeName} `;
-        } else {
-            nodeBox.insertBefore(document.createTextNode(`${safeName} `), nodeBox.firstChild);
-        }
-
+            .find((child) => child.nodeType === Node.TEXT_NODE && child.textContent.trim()) || null;
         const badges = Array.from(nodeBox.querySelectorAll('.badge'));
-        const categoryBadge = badges.find((badge) => ['服事', '配搭', '追求', '福音'].includes(badge.textContent.trim()));
-        if (categoryBadge) {
-            categoryBadge.textContent = safeType;
-            categoryBadge.classList.remove(...categoryClasses);
-            categoryBadge.classList.add(tagClass);
-        } else if (!badges.length) {
-            const categoryBadge = document.createElement('span');
-            categoryBadge.className = `badge ${tagClass}`;
-            categoryBadge.textContent = safeType;
-            nodeBox.appendChild(categoryBadge);
-        }
-        persistTreeState();
+        const currentType = getEntryType(nodeBox, null);
+        const categoryBadge = badges.find((badge) => badge.textContent.trim() === currentType) || null;
+
+        editingEntry = { nodeBox, directTextNode, badges, categoryBadge };
+        mainTextField.value = directTextNode ? directTextNode.textContent.trim() : '';
+        categoryField.value = currentType;
+        badgeFields.replaceChildren();
+
+        badges.forEach(function (badge, index) {
+            if (badge === categoryBadge) {
+                return;
+            }
+
+            const label = document.createElement('label');
+            label.className = 'entry-editor-field';
+            label.textContent = `內嵌標籤 ${index + 1}`;
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = badge.textContent.trim();
+            input.dataset.badgeIndex = String(index);
+            label.appendChild(input);
+            badgeFields.appendChild(label);
+        });
+
+        dialog.showModal();
+        mainTextField.focus();
+    }
+
+    function initializeEntryEditor() {
+        const dialog = document.getElementById('entry-editor-dialog');
+        const form = document.getElementById('entry-editor-form');
+        const mainTextField = document.getElementById('entry-main-text');
+        const categoryField = document.getElementById('entry-category');
+
+        document.getElementById('entry-editor-cancel').addEventListener('click', function () {
+            dialog.close();
+        });
+
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            if (!editingEntry) {
+                dialog.close();
+                return;
+            }
+
+            const { nodeBox, directTextNode, badges, categoryBadge } = editingEntry;
+            const mainText = mainTextField.value.trim();
+            if (!mainText) {
+                mainTextField.focus();
+                return;
+            }
+
+            pushHistoryState();
+            const textNode = directTextNode && nodeBox.contains(directTextNode)
+                ? directTextNode
+                : document.createTextNode('');
+            textNode.textContent = `${mainText} `;
+            if (!nodeBox.contains(textNode)) {
+                const firstBadge = badges.find((badge) => nodeBox.contains(badge));
+                nodeBox.insertBefore(textNode, firstBadge || null);
+            }
+
+            document.querySelectorAll('#entry-badge-fields input').forEach(function (input) {
+                const badge = badges[Number(input.dataset.badgeIndex)];
+                if (badge && nodeBox.contains(badge)) {
+                    badge.textContent = input.value.trim();
+                }
+            });
+
+            const category = categoryField.value;
+            const tagClass = getTagClass(category);
+            const categoryClasses = ['tag-server', 'tag-pairing', 'tag-pursuit', 'tag-gospel'];
+            nodeBox.classList.remove(...categoryClasses);
+            nodeBox.classList.add(tagClass);
+            if (categoryBadge && nodeBox.contains(categoryBadge)) {
+                categoryBadge.textContent = category;
+                categoryBadge.classList.remove(...categoryClasses);
+                categoryBadge.classList.add(tagClass);
+            }
+
+            persistTreeState();
+            editingEntry = null;
+            dialog.close();
+        });
     }
 
     // Toggle Core Leader branch expansion
@@ -1129,6 +1274,7 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         restoreTreeState();
+        initializeEntryEditor();
         initializeCloudSync();
 
         const undoButton = document.getElementById('undo-action-btn');
