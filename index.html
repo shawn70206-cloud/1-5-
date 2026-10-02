@@ -746,21 +746,21 @@
     }
 
     function getEntryType(nodeBox, tagNode) {
-        const badgeType = tagNode ? normalizeEntryType(tagNode.textContent) : '';
-        const knownTypes = ['服事', '配搭', '追求', '福音'];
-        if (knownTypes.includes(badgeType)) {
-            return badgeType;
-        }
-
         const classTypeMap = {
             'tag-server': '服事',
             'tag-pairing': '配搭',
             'tag-pursuit': '追求',
             'tag-gospel': '福音'
         };
-        return Array.from(nodeBox.classList)
+        const classType = Array.from(nodeBox.classList)
             .map((className) => classTypeMap[className])
-            .find(Boolean) || '配搭';
+            .find(Boolean);
+        if (classType) {
+            return classType;
+        }
+
+        const badgeType = tagNode ? tagNode.textContent.trim() : '';
+        return ['服事', '配搭', '追求', '福音'].includes(badgeType) ? badgeType : '配搭';
     }
 
     function formatEntryContent(name, typeName) {
@@ -996,8 +996,30 @@
         const tagClass = getTagClass(safeType);
 
         pushHistoryState();
-        nodeBox.className = `node-box leaf-node ${tagClass}`;
-        nodeBox.innerHTML = formatEntryContent(safeName, safeType);
+        const categoryClasses = ['tag-server', 'tag-pairing', 'tag-pursuit', 'tag-gospel'];
+        nodeBox.classList.remove(...categoryClasses);
+        nodeBox.classList.add(tagClass);
+
+        const directTextNode = Array.from(nodeBox.childNodes)
+            .find((child) => child.nodeType === Node.TEXT_NODE && child.textContent.trim());
+        if (directTextNode) {
+            directTextNode.textContent = `${safeName} `;
+        } else {
+            nodeBox.insertBefore(document.createTextNode(`${safeName} `), nodeBox.firstChild);
+        }
+
+        const badges = Array.from(nodeBox.querySelectorAll('.badge'));
+        const categoryBadge = badges.find((badge) => ['服事', '配搭', '追求', '福音'].includes(badge.textContent.trim()));
+        if (categoryBadge) {
+            categoryBadge.textContent = safeType;
+            categoryBadge.classList.remove(...categoryClasses);
+            categoryBadge.classList.add(tagClass);
+        } else if (!badges.length) {
+            const categoryBadge = document.createElement('span');
+            categoryBadge.className = `badge ${tagClass}`;
+            categoryBadge.textContent = safeType;
+            nodeBox.appendChild(categoryBadge);
+        }
         persistTreeState();
     }
 
